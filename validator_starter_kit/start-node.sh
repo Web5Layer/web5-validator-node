@@ -1,8 +1,16 @@
 #!/bin/bash
 
-# Step 1: Generate wallet using ethers.js
-echo "🧠 Generating wallet..."
-node <<EOF > wallet.json
+# === CONFIG ===
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+NODE_DIR="node-data-$TIMESTAMP"
+KEY_FILE="wallet.json"
+PASSWORD_FILE="password.txt"
+
+echo "🔐 Please enter a password to protect your validator wallet:"
+read -s WALLET_PASSWORD
+
+echo "🔧 Creating your wallet using ethers.js..."
+node <<EOF > $KEY_FILE
 const { ethers } = require("ethers");
 const wallet = ethers.Wallet.createRandom();
 console.log(JSON.stringify({
@@ -12,37 +20,38 @@ console.log(JSON.stringify({
 }, null, 2));
 EOF
 
-# Step 2: Parse wallet info
-ADDRESS=$(jq -r .address wallet.json)
-PRIVATE_KEY=$(jq -r .privateKey wallet.json)
-MNEMONIC=$(jq -r .mnemonic wallet.json)
+# Extract wallet info
+ADDRESS=$(jq -r .address $KEY_FILE)
+PRIVATE_KEY=$(jq -r .privateKey $KEY_FILE)
+MNEMONIC=$(jq -r .mnemonic $KEY_FILE)
 
+# Show wallet details
 echo ""
 echo "📍 Your new validator wallet:"
 echo "   Address:     $ADDRESS"
 echo "   Private Key: $PRIVATE_KEY"
 echo "   Mnemonic:    $MNEMONIC"
-echo "⚠️  Make sure to save these securely!"
+echo "⚠️  Save these somewhere safe!"
 echo ""
 
-# Step 3: Ask for password
-echo "🔐 Please enter a password to protect your keystore:"
-read -s WALLET_PASSWORD
+# Create new data directory
+mkdir -p $NODE_DIR/keystore
 
-# Step 4: Create keystore directory
-mkdir -p node-data/keystore
+# Save password and import private key
+echo "$PRIVATE_KEY" > tempkey.txt
+echo "$WALLET_PASSWORD" > $PASSWORD_FILE
+./geth account import --datadir $NODE_DIR --password $PASSWORD_FILE tempkey.txt
 
-# Step 5: Import private key into Geth
-echo $PRIVATE_KEY > tempkey.txt
-echo $WALLET_PASSWORD > password.txt
-./geth account import --datadir node-data --password password.txt tempkey.txt
-
-# Step 6: Clean up temp files
+# Remove raw key for safety
 rm tempkey.txt
 
-# Step 7: Run the node
-echo "🚀 Starting node with your validator..."
-./geth --datadir node-data \
+# Initialize the genesis
+echo "🌱 Initializing genesis..."
+./geth init --datadir $NODE_DIR genesis.json
+
+# Start the node
+echo "🚀 Starting your validator node..."
+./geth --datadir $NODE_DIR \
   --networkid 22550 \
   --port 30303 \
   --http --http.addr 0.0.0.0 --http.port 8545 \
@@ -51,6 +60,5 @@ echo "🚀 Starting node with your validator..."
   --mine \
   --allow-insecure-unlock \
   --unlock "$ADDRESS" \
-  --password password.txt \
+  --password $PASSWORD_FILE \
   --nodiscover --verbosity 3
-
