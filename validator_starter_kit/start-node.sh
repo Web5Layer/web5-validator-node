@@ -1,19 +1,47 @@
 #!/bin/bash
 
-echo "🔐 Please enter a password to secure your wallet:"
+# Step 1: Generate wallet using ethers.js
+echo "🧠 Generating wallet..."
+node <<EOF > wallet.json
+const { ethers } = require("ethers");
+const wallet = ethers.Wallet.createRandom();
+console.log(JSON.stringify({
+  address: wallet.address,
+  privateKey: wallet.privateKey,
+  mnemonic: wallet.mnemonic.phrase
+}, null, 2));
+EOF
+
+# Step 2: Parse wallet info
+ADDRESS=$(jq -r .address wallet.json)
+PRIVATE_KEY=$(jq -r .privateKey wallet.json)
+MNEMONIC=$(jq -r .mnemonic wallet.json)
+
+echo ""
+echo "📍 Your new validator wallet:"
+echo "   Address:     $ADDRESS"
+echo "   Private Key: $PRIVATE_KEY"
+echo "   Mnemonic:    $MNEMONIC"
+echo "⚠️  Make sure to save these securely!"
+echo ""
+
+# Step 3: Ask for password
+echo "🔐 Please enter a password to protect your keystore:"
 read -s WALLET_PASSWORD
 
-mkdir -p node-data
+# Step 4: Create keystore directory
+mkdir -p node-data/keystore
 
-echo "🧠 Creating new account..."
-./geth account new --datadir node-data --password <(echo "$WALLET_PASSWORD")
+# Step 5: Import private key into Geth
+echo $PRIVATE_KEY > tempkey.txt
+echo $WALLET_PASSWORD > password.txt
+./geth account import --datadir node-data --password password.txt tempkey.txt
 
-ACCOUNT_ADDRESS=$(./geth account list --datadir node-data | head -n 1 | cut -d '{' -f2 | cut -d '}' -f1)
+# Step 6: Clean up temp files
+rm tempkey.txt
 
-echo "🟢 Initializing node..."
-./geth init --datadir node-data genesis.json
-
-echo "🚀 Starting your node..."
+# Step 7: Run the node
+echo "🚀 Starting node with your validator..."
 ./geth --datadir node-data \
   --networkid 22550 \
   --port 30303 \
@@ -22,6 +50,7 @@ echo "🚀 Starting your node..."
   --http.corsdomain "*" --http.vhosts "*" \
   --mine \
   --allow-insecure-unlock \
-  --unlock $ACCOUNT_ADDRESS \
-  --password <(echo "$WALLET_PASSWORD") \
+  --unlock "$ADDRESS" \
+  --password password.txt \
   --nodiscover --verbosity 3
+
