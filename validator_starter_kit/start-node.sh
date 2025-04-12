@@ -65,4 +65,5 @@ echo "🚀 Starting your validator node..."
   --allow-insecure-unlock \
   --unlock "$ADDRESS" \
   --password "$PASSWORD_FILE" \
+  --nat extip:$(curl -s ifconfig.me) \
   --nodiscover --verbosity 3
