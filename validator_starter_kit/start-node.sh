@@ -37,19 +37,24 @@ echo "⚠️  Save these securely! Never share them with anyone!"
 echo ""
 
 # 5. Create keystore directory and import key
-mkdir -p $NODE_DIR/keystore
+mkdir -p "$NODE_DIR/keystore"
 echo "$PRIVATE_KEY" > tempkey.txt
 echo "$WALLET_PASSWORD" > $PASSWORD_FILE
-./geth account import --datadir $NODE_DIR --password $PASSWORD_FILE tempkey.txt
+
+# Fix potential format issues: strip 0x if needed
+CLEAN_KEY=$(echo "$PRIVATE_KEY" | sed 's/^0x//')
+echo "$CLEAN_KEY" > tempkey.txt
+
+./geth account import --datadir "$NODE_DIR" --password "$PASSWORD_FILE" tempkey.txt
 rm tempkey.txt
 
 # 6. Initialize the genesis block
 echo "🌱 Initializing genesis..."
-./geth init --datadir $NODE_DIR genesis.json
+./geth init --datadir "$NODE_DIR" genesis.json
 
 # 7. Start the node
 echo "🚀 Starting your validator node..."
-./geth --datadir $NODE_DIR \
+./geth --datadir "$NODE_DIR" \
   --networkid 22550 \
   --port 30303 \
   --http --http.addr 0.0.0.0 --http.port 8545 \
@@ -59,5 +64,5 @@ echo "🚀 Starting your validator node..."
   --miner.etherbase "$ADDRESS" \
   --allow-insecure-unlock \
   --unlock "$ADDRESS" \
-  --password $PASSWORD_FILE \
+  --password "$PASSWORD_FILE" \
   --nodiscover --verbosity 3
