@@ -6,9 +6,11 @@ NODE_DIR="node-data-$TIMESTAMP"
 KEY_FILE="wallet.json"
 PASSWORD_FILE="password.txt"
 
+# 1. Ask for wallet password
 echo "🔐 Please enter a password to protect your validator wallet:"
 read -s WALLET_PASSWORD
 
+# 2. Generate wallet using ethers.js
 echo "🔧 Creating your wallet using ethers.js..."
 node <<EOF > $KEY_FILE
 const { ethers } = require("ethers");
@@ -20,36 +22,32 @@ console.log(JSON.stringify({
 }, null, 2));
 EOF
 
-# Extract wallet info
+# 3. Extract wallet info
 ADDRESS=$(jq -r .address $KEY_FILE)
 PRIVATE_KEY=$(jq -r .privateKey $KEY_FILE)
 MNEMONIC=$(jq -r .mnemonic $KEY_FILE)
 
-# Show wallet details
+# 4. Show user info
 echo ""
 echo "📍 Your new validator wallet:"
 echo "   Address:     $ADDRESS"
 echo "   Private Key: $PRIVATE_KEY"
 echo "   Mnemonic:    $MNEMONIC"
-echo "⚠️  Save these somewhere safe!"
+echo "⚠️  Save these securely! Never share them with anyone!"
 echo ""
 
-# Create new data directory
+# 5. Create keystore directory and import key
 mkdir -p $NODE_DIR/keystore
-
-# Save password and import private key
 echo "$PRIVATE_KEY" > tempkey.txt
 echo "$WALLET_PASSWORD" > $PASSWORD_FILE
 ./geth account import --datadir $NODE_DIR --password $PASSWORD_FILE tempkey.txt
-
-# Remove raw key for safety
 rm tempkey.txt
 
-# Initialize the genesis
+# 6. Initialize the genesis block
 echo "🌱 Initializing genesis..."
 ./geth init --datadir $NODE_DIR genesis.json
 
-# Start the node
+# 7. Start the node
 echo "🚀 Starting your validator node..."
 ./geth --datadir $NODE_DIR \
   --networkid 22550 \
@@ -58,8 +56,8 @@ echo "🚀 Starting your validator node..."
   --http.api eth,net,web3,personal,miner \
   --http.corsdomain "*" --http.vhosts "*" \
   --mine \
+  --miner.etherbase "$ADDRESS" \
   --allow-insecure-unlock \
   --unlock "$ADDRESS" \
-  --etherbase "$ADDRESS" \
   --password $PASSWORD_FILE \
   --nodiscover --verbosity 3
