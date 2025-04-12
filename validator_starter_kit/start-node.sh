@@ -57,7 +57,7 @@ echo "🚀 Starting your validator node..."
 ./geth --datadir "$NODE_DIR" \
   --networkid 22550 \
   --port 30303 \
-  --http --http.addr 0.0.0.0 --http.port 8545 \
+  --http --http.addr "0.0.0.0" --http.port 8545 \
   --http.api eth,net,web3,personal,miner \
   --http.corsdomain "*" --http.vhosts "*" \
   --mine \
