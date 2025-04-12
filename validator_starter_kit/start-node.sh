@@ -60,5 +60,6 @@ echo "🚀 Starting your validator node..."
   --mine \
   --allow-insecure-unlock \
   --unlock "$ADDRESS" \
+  --etherbase "$ADDRESS" \
   --password $PASSWORD_FILE \
   --nodiscover --verbosity 3
