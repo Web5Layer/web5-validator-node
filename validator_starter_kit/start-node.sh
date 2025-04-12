@@ -10,9 +10,10 @@ PASSWORD_FILE="password.txt"
 echo "🔐 Please enter a password to protect your validator wallet:"
 read -s WALLET_PASSWORD
 
-# 2. Generate wallet using ethers.js
-echo "🔧 Creating your wallet using ethers.js..."
-node <<EOF > $KEY_FILE
+# 2. Generate wallet only if it doesn't exist
+if [ ! -f "$KEY_FILE" ]; then
+  echo "🔧 Creating your wallet using ethers.js..."
+  node <<EOF > $KEY_FILE
 const { ethers } = require("ethers");
 const wallet = ethers.Wallet.createRandom();
 console.log(JSON.stringify({
@@ -21,6 +22,9 @@ console.log(JSON.stringify({
   mnemonic: wallet.mnemonic.phrase
 }, null, 2));
 EOF
+else
+  echo "📄 Wallet already exists. Reusing existing $KEY_FILE"
+fi
 
 # 3. Extract wallet info
 ADDRESS=$(jq -r .address $KEY_FILE)
@@ -29,7 +33,7 @@ MNEMONIC=$(jq -r .mnemonic $KEY_FILE)
 
 # 4. Show user info
 echo ""
-echo "📍 Your new validator wallet:"
+echo "📍 Your validator wallet:"
 echo "   Address:     $ADDRESS"
 echo "   Private Key: $PRIVATE_KEY"
 echo "   Mnemonic:    $MNEMONIC"
